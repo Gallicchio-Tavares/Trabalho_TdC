@@ -76,35 +76,82 @@ class lang_B(TuringMachineBase):
     na minha interpretação, se não tem 1s, não podemos ter 0s. pq o dobro de zero é zero.
     """
     def run(self):
-        count_0 = 0
-        count_1 = 0
-        
-        while self.head > 0:
-            self.move_left()
-            
+        # Estado: procurando 1 não marcado
         while True:
-            symbol = self.read()
-            if symbol == '_':
-                break
-            elif symbol == '0':
-                count_0 += 1
-            elif symbol == '1':
-                count_1 += 1
-            self.move_right()
-        
-        if count_1 == 0:
-            return count_0 == 0  
-        else:
-            return count_0 == 2 * count_1
+            # Voltar ao início
+            while self.head > 0:
+                self.move_left()
+            
+            # Procurar um '1' não marcado
+            found_1 = False
+            while True:
+                symbol = self.read()
+                if symbol == '_':  # Fim da fita
+                    break
+                elif symbol == '1':  # Encontrou 1 não marcado
+                    found_1 = True
+                    self.write('Y')  # Marcar o 1
+                    break
+                self.move_right()
+            
+            if not found_1:
+                # Não encontrou mais 1s - verificar se não sobrou 0 não marcado
+                while self.head > 0:
+                    self.move_left()
+                while True:
+                    symbol = self.read()
+                    if symbol == '0':  # Sobrou 0 não marcado - REJEITA
+                        return False
+                    elif symbol == '_':  # Fim - ACEITA
+                        return True
+                    self.move_right()
+            
+            # Para este 1, precisamos encontrar 2 zeros não marcados
+            zeros_encontrados = 0
+            while zeros_encontrados < 2:
+                # Voltar ao início para procurar zeros
+                while self.head > 0:
+                    self.move_left()
+                
+                found_zero = False
+                while True:
+                    symbol = self.read()
+                    if symbol == '_':  # Fim sem zeros suficientes
+                        return False
+                    elif symbol == '0':  # Encontrou zero não marcado
+                        self.write('X')  # Marcar o zero
+                        zeros_encontrados += 1
+                        found_zero = True
+                        break
+                    self.move_right()
+                
+                if not found_zero:
+                    return False
 
 
 
 class lang_C(TuringMachineBase):
-    # só negamos a B
-    def run(self): 
+    """
+    complemento de b
+    L = { w | #0 ≠ 2 X #1 }
+    """
+    def run(self):
+        # Estratégia: tentar executar o processo de langB
+        # Se langB aceita, nós rejeitamos, e vice-versa
+        
+        # Fazer uma cópia da fita para não modificar a original
+        fita_original = self.tape.copy()
+        posicao_original = self.head
+        
+        # Simular langB
         temp = lang_B("".join(self.tape).rstrip('_'))
-        resultado = temp.run()
-        return not resultado
+        resultado_b = temp.run()
+        
+        # Restaurar fita original
+        self.tape = fita_original
+        self.head = posicao_original
+        
+        return not resultado_b
 
 
 if __name__ == "__main__":
